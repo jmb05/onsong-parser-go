@@ -1,10 +1,57 @@
-/* the most basic css script for making the html site work:
- *     monospace font and styling for the inlined chords
- */
+body {
+    font-size: 20px;
+    font-family: "Helvetica";
+    background: #ccc5c4;
+    color: #070707;
+
+    height: 100vh;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+h1 {
+    font-size: 3em;
+    font-variant: small-caps;
+    margin-bottom: 0;
+    text-align: center;
+}
+
+h2 {
+    font-size: 1.5em;
+    line-height: 1.5em;
+    margin-top: 0;
+    text-align: center
+}
+
+#metadata {
+    list-style-type: none;
+    padding-left: 0;
+    width: 20%;
+    position: absolute;
+    left: 2%;
+    text-align: start;
+}
+
+#metadata li {
+    padding: 7px 0;
+}
+
+
+#song {
+    font-size: 1em;
+    width: 75%;
+    position: relative;
+    left: 25%;
+}
+
+#song h3 {
+    padding-left: 0.5em;
+}
 
 #song p {
-    /* monospace font is absolutely needed (for solving the overlapping chord problem) */
-    font-family: "Space Mono", monospace; 
+    font-size: 24px;
+    font-family: "Space Mono", monospace;
     line-height: 120%;
 }
 
@@ -16,12 +63,32 @@
     display: none;
 }
 
-/* show chords above the lyrics (turn off by removing the show-chords class) */
 #song.show-chords p .chord {
     position: relative;
     top: -1em;
     display:inline-block;
     width: 0;
     overflow: visible;
+    color: #c30215;
+    font-weight: bold;
+}
+
+#copyright {
+    min-height: 20px;
+    margin-top: auto;
+}
+
+footer {
+    min-height: 50px;
+}
+
+footer a {
+    display: flex;
+    justify-content: center;
+    color: #440044;
+}
+
+footer a:visited {
+    color: #e05a1c;
 }
 
