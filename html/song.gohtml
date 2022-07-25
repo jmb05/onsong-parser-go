@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<meta viewport="width=device-width initial-scale=1">
+		<link rel="stylesheet" href="../css/song.css">
+		<meta description="chord sheet generated with Onsong-Parser-go">
+	</head>
+	<body>
+		<main>
+			<h1>{{ .Title }}</h1>
+			<h2>{{ .Artist }}</h2>
+			<ul id="metadata">
+				{{ range .Meta }}
+				<li>{{.}}</li>
+				{{ end }}
+			</ul>
+			<div id="song" class="show-chords">
+				{{ range .Sections }}
+				<h3>{{ .Title }}</h3>
+				<p>
+					{{ range .Lines }}
+               {{.}}<br>
+					{{ end }}
+				</p>
+				{{ end }}
+			</div>
+		</main>
+		<i id="copyright">{{ .Copyright }}</i>
+		<footer>
+			<hr>
+			<a href="../index.html">Home</a>
+		</footer>		
+
+	</body>
+</html>
