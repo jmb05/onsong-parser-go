@@ -16,3 +16,5 @@
 
 *.onsong
 *.html
+songs/
+Onsong-Parser-go

@@ -4,6 +4,7 @@ go 1.18
 
 require (
 	github.com/BurntSushi/toml v1.0.0 // indirect
+	github.com/TomOnTime/utfutil v0.0.0-20210710122150-437f72b26edf // indirect
 	github.com/google/go-cmp v0.5.7 // indirect
 	github.com/jmb05/styling v0.0.0-20220725120611-88863684e935 // indirect
 	github.com/sergi/go-diff v1.1.0 // indirect

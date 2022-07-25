@@ -2,14 +2,14 @@ package html
 
 import (
 	"bytes"
-	"html/template"
 	"log"
+	"text/template"
 
 	"github.com/jmb05/Onsong-Parser-go/onsong"
 )
 
-func CreateHtml(song onsong.Song) string {
-	tmpl, err := template.ParseFiles("./html/song.gohtml")
+func CreateHtml(song onsong.Song, templatePath string) string {
+	tmpl, err := template.ParseFiles(templatePath)
 	if err != nil {
 		log.Panic(err)
 	}

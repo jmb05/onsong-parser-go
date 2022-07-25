@@ -19,9 +19,9 @@
 				{{ range .Sections }}
 				<h3>{{ .Title }}</h3>
 				<p>
-					{{ range .Lines }}
-               {{.}}<br>
-					{{ end }}
+					{{ range .Lines }}{{ range .Parts }}{{ if .IsChord }}<span class="chord" style="padding-left: {{ .Chord.Padding }}px">{{ .Chord.Value }}</span>{{ else }}{{ .Text }}{{ end }}{{ end }}
+               <br>
+               {{ end }}
 				</p>
 				{{ end }}
 			</div>
