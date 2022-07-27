@@ -90,7 +90,16 @@ func ParseSections(paragraphs [][]string) []Section {
 			if len(paragraphs[i]) > 1 {
 				lines := []Line{}
 
-				for _, lineStr := range paragraphs[i][1:] {
+				var title string
+				var startFrom int
+				if isTitle(paragraphs[i][0]) {
+					startFrom = 1
+					title = paragraphs[i][0]
+				} else {
+					startFrom = 0
+				}
+
+				for _, lineStr := range paragraphs[i][startFrom:] {
 					line := Line{
 						Parts: parseLineParts(lineStr),
 					}
@@ -98,7 +107,7 @@ func ParseSections(paragraphs [][]string) []Section {
 				}
 
 				section := Section{
-					Title: paragraphs[i][0],
+					Title: title,
 					Lines: lines,
 				}
 				sections = append(sections, section)
@@ -106,6 +115,10 @@ func ParseSections(paragraphs [][]string) []Section {
 		}
 	}
 	return sections
+}
+
+func isTitle(line string) bool {
+	return !(strings.Contains(line, "[") && strings.Contains(line, "]"))
 }
 
 func parseLineParts(lineStr string) []LinePart {
@@ -118,7 +131,7 @@ func parseLineParts(lineStr string) []LinePart {
 			if i > 0 {
 				partBefore := splitLine[i-1]
 				if isChord(partBefore) {
-					padding = len(partBefore) * 15
+					padding = len(strings.TrimSpace(partBefore)) * 15
 				}
 			}
 			lineParts = append(lineParts, LinePart{
