@@ -1,8 +1,6 @@
 package onsong
 
-import (
-	"strings"
-)
+import "strings"
 
 type Song struct {
 	Title     string
@@ -64,16 +62,25 @@ func SplitParagraphs(content string) [][]string {
 	return out
 }
 
-func isBlank(s string) bool {
-	return strings.TrimSpace(s) == ""
-}
-
 func ParseTitle(paragraphs [][]string) string {
 	return strings.Replace(paragraphs[0][0], string([]byte{255, 254}), "", 1)
 }
 
 func ParseArtist(paragraphs [][]string) string {
 	return paragraphs[0][1]
+}
+
+func ParseMetadata(paragraphs [][]string) ([]string, string) {
+	lines := []string{}
+	var copyright string
+	for i := 2; i < len(paragraphs[0]); i++ {
+		if strings.HasPrefix(paragraphs[0][i], "Copyright") {
+			copyright = strings.TrimSpace(strings.Split(paragraphs[0][i], ":")[1])
+		} else if !strings.HasPrefix(paragraphs[0][i], "Keywords") && !strings.HasPrefix(paragraphs[0][i], "CCLI") {
+			lines = append(lines, paragraphs[0][i])
+		}
+	}
+	return lines, copyright
 }
 
 func ParseSections(paragraphs [][]string) []Section {
@@ -162,15 +169,6 @@ func splitBefore(in string, delimeter string) []string {
 	return out
 }
 
-func ParseMetadata(paragraphs [][]string) ([]string, string) {
-	lines := []string{}
-	var copyright string
-	for i := 2; i < len(paragraphs[0]); i++ {
-		if strings.HasPrefix(paragraphs[0][i], "Copyright") {
-			copyright = strings.TrimSpace(strings.Split(paragraphs[0][i], ":")[1])
-		} else if !strings.HasPrefix(paragraphs[0][i], "Keywords") && !strings.HasPrefix(paragraphs[0][i], "CCLI") {
-			lines = append(lines, paragraphs[0][i])
-		}
-	}
-	return lines, copyright
+func isBlank(s string) bool {
+	return strings.TrimSpace(s) == ""
 }
