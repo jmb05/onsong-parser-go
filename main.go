@@ -14,7 +14,8 @@ import (
 	"github.com/jmb05/styling"
 )
 
-const defaultTemplatePath = "html/template.gohtml"
+const DEFAULT_TEMPLATE_PATH = "html/template.gohtml"
+const DEFAULT_PADDING = 15
 
 func readFile(path string) string {
 	content, err := utfutil.ReadFile(path, utfutil.UTF8)
@@ -26,12 +27,15 @@ func readFile(path string) string {
 }
 
 func main() {
+	metadataKeys := []string{"Key", "Time", "Tempo"}
 	fmt.Println(styling.ColorBold("white", "Onsong to HTML Parser"))
-	fmt.Println("Copyright (C) 2022, Bennett")
+	fmt.Println("Copyright (C) 2022, Josiah Bennett, Jared M. Bennett")
 	var skip int
-	templatePath := defaultTemplatePath
+	templatePath := DEFAULT_TEMPLATE_PATH
 	onsongFiles := []string{}
 	recursive := false
+	padding := DEFAULT_PADDING
+	paddingSens := 0
 	for i, arg := range os.Args[1:] {
 		if skip > 0 {
 			skip--
@@ -42,10 +46,39 @@ func main() {
 			skip = 1
 			if !exists(templatePath) {
 				fmt.Println(styling.Color("yellow", "Warning: Template \"") + styling.ColorItalic("yellow", templatePath) + styling.Color("yellow", "\" does not exist! Using default..."))
-				templatePath = defaultTemplatePath
+				templatePath = DEFAULT_TEMPLATE_PATH
 			}
-		} else if arg == "-r" {
+		} else if arg == "-r" || arg == "--recursive" {
 			recursive = true
+		} else if arg == "-m" || arg == "--metadata-tags" {
+			metadataKeys = strings.Split(os.Args[i+2], " ")
+			skip = 1
+		} else if arg == "-p" || arg == "--padding-size" {
+			paddingN, err := strconv.Atoi(os.Args[i+2])
+			padding = paddingN
+			if err != nil {
+				panic(err)
+			}
+			skip = 1
+		} else if arg == "--padding-sensitivity" {
+			paddingSensCp, err := strconv.Atoi(os.Args[i+2])
+			paddingSens = paddingSensCp
+			if err != nil {
+				panic(err)
+			}
+			skip = 1
+		} else if arg == "-h" || arg == "--help" {
+			fmt.Println("\nUsage: Onsong-Parser-go [OPTION]... [FILE/FOLDER]... ")
+			fmt.Println("Parses *.onsong files to *.html files\n")
+			fmt.Println("Options:")
+			fmt.Println("-h, --help\t\t\t show this info")
+			fmt.Println("-m, --metadata-tags\t\t which metadata tags should be shown ")
+			fmt.Println("\t\t\t\t (e.g.: \"Key Duration Keywords\")")
+			fmt.Println("-r, --recursive\t\t\t search recursive (in subfolders)")
+			fmt.Println("-p, --padding-size\t\t size of the padding between chords (per character)")
+
+			fmt.Println("    --padding-sensitivity\t change the padding sensitivity")
+			os.Exit(0)
 		} else {
 			onsongFiles = append(onsongFiles, arg)
 		}
@@ -61,9 +94,9 @@ func main() {
 			}
 
 			if fileInfo.IsDir() {
-				filesCreated += parseFolder(path, templatePath, recursive)
+				filesCreated += parseFolder(path, templatePath, metadataKeys, recursive, padding, paddingSens)
 			} else {
-				if parseOnsongFile(path, templatePath) {
+				if parseOnsongFile(path, templatePath, metadataKeys, padding, paddingSens) {
 					filesCreated++
 				}
 			}
@@ -78,7 +111,7 @@ func main() {
 	}
 }
 
-func parseFolder(path string, templatePath string, recursive bool) int {
+func parseFolder(path string, templatePath string, metadataKeys []string, recursive bool, padding int, paddingSens int) int {
 	files, err := ioutil.ReadDir(path)
 	if err != nil {
 		fileError(err, path)
@@ -101,7 +134,7 @@ func parseFolder(path string, templatePath string, recursive bool) int {
 
 		if fileInfo.IsDir() {
 			if recursive {
-				parseFolder(filePath, templatePath, recursive)
+				parseFolder(filePath, templatePath, metadataKeys, recursive, padding, paddingSens)
 			} else {
 				fmt.Println("Skipping directory: \"" + styling.ColorItalic("white", filePath) + "\" Add parameter \"-r\" to parse recursively")
 				continue
@@ -112,18 +145,18 @@ func parseFolder(path string, templatePath string, recursive bool) int {
 			continue
 		}
 
-		if parseOnsongFile(filePath, templatePath) {
+		if parseOnsongFile(filePath, templatePath, metadataKeys, padding, paddingSens) {
 			filesCreated++
 		}
 	}
 	return filesCreated
 }
 
-func parseOnsongFile(path string, templatePath string) bool {
+func parseOnsongFile(path string, templatePath string, metadataKeys []string, padding int, paddingSens int) bool {
 	if !strings.HasSuffix(path, ".onsong") {
 		fmt.Println(styling.Color("yellow", "Warning: File \"") + styling.ColorItalic("yellow", path) + styling.Color("yellow", "\" doesn't have \".onsong\" ending"))
 	}
-	song, success := onsong.Parse(readFile(path))
+	song, success := onsong.Parse(readFile(path), metadataKeys, padding, paddingSens)
 	if !success {
 		fmt.Println(styling.Color("yellow", "Skipping..."))
 		return false
