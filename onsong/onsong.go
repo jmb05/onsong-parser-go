@@ -1,6 +1,8 @@
 package onsong
 
-import "strings"
+import (
+	"strings"
+)
 
 type Song struct {
 	Title     string
@@ -132,6 +134,12 @@ func parseLineParts(lineStr string) []LinePart {
 				partBefore := splitLine[i-1]
 				if isChord(partBefore) {
 					padding = len(strings.TrimSpace(partBefore)) * 15
+				} else if i > 1 {
+					chordBefore := splitLine[i-2]
+					padding = (len(chordBefore) - len(partBefore) - 1) * 15
+					if padding < 0 {
+						padding = 0
+					}
 				}
 			}
 			lineParts = append(lineParts, LinePart{
