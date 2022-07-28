@@ -25,6 +25,6 @@ func CreateHtml(song onsong.Song, templatePath string) string {
 }
 
 func parseError(err error) {
-	fmt.Println(styling.Color("red", "Error applying template"))
+	fmt.Println(styling.Style("red", "regular", "Error applying template"))
 	fmt.Println(err)
 }
