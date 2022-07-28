@@ -33,14 +33,14 @@ type Chord struct {
 }
 
 func Parse(content string, metadataKeys []string, defaultPadding int, paddingSensitivity int) (Song, bool) {
-	if strings.TrimSpace(content) == "" {
+	if isBlank(content) {
 		return Song{}, false
 	}
 	paragraphs := SplitParagraphs(content)
 	metadata, copyright := ParseMetadata(paragraphs[0], metadataKeys)
 	song := Song{
-		Title:     ParseTitle(paragraphs),
-		Artist:    ParseArtist(paragraphs),
+		Title:     paragraphs[0][0],
+		Artist:    paragraphs[0][1],
 		Meta:      metadata,
 		Sections:  ParseSections(paragraphs, defaultPadding, paddingSensitivity),
 		Copyright: copyright,
@@ -62,14 +62,6 @@ func SplitParagraphs(content string) [][]string {
 	}
 	out = append(out, currentParagraph)
 	return out
-}
-
-func ParseTitle(paragraphs [][]string) string {
-	return strings.Replace(paragraphs[0][0], string([]byte{255, 254}), "", 1)
-}
-
-func ParseArtist(paragraphs [][]string) string {
-	return paragraphs[0][1]
 }
 
 func ParseMetadata(paragraph []string, includedKeys []string) ([]string, string) {
@@ -103,7 +95,7 @@ func ParseSections(paragraphs [][]string, defaultPadding int, paddingSensitivity
 
 				var title string
 				var startFrom int
-				if isTitle(paragraphs[i][0]) {
+				if isSectionTitle(paragraphs[i][0]) {
 					startFrom = 1
 					title = paragraphs[i][0]
 				} else {
@@ -128,7 +120,7 @@ func ParseSections(paragraphs [][]string, defaultPadding int, paddingSensitivity
 	return sections
 }
 
-func isTitle(line string) bool {
+func isSectionTitle(line string) bool {
 	return !(strings.Contains(line, "[") && strings.Contains(line, "]"))
 }
 
