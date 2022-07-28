@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"text/template"
 
-	"github.com/jmb05/Onsong-Parser-go/onsong"
+	"github.com/jmb05/onsong-parser-go/onsong"
 	"github.com/jmb05/styling"
 )
 

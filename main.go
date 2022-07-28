@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/TomOnTime/utfutil"
-	"github.com/jmb05/Onsong-Parser-go/html"
-	"github.com/jmb05/Onsong-Parser-go/onsong"
+	"github.com/jmb05/onsong-parser-go/html"
+	"github.com/jmb05/onsong-parser-go/onsong"
 	"github.com/jmb05/styling"
 )
 
@@ -36,12 +36,15 @@ func main() {
 	recursive := false
 	padding := DEFAULT_PADDING
 	paddingSens := 0
+	fixUmlauts := true
 	for i, arg := range os.Args[1:] {
 		if skip > 0 {
 			skip--
 			continue
 		}
 		switch arg {
+		case "--dont-fix-umlauts":
+			fixUmlauts = false
 		case "-t", "--template":
 			templatePath = os.Args[i+2]
 			skip = 1
@@ -80,7 +83,7 @@ func main() {
 	if len(onsongFiles) > 0 {
 		fmt.Printf("Using Template: " + styling.Style("cyan", "", "\""))
 		fmt.Printf(styling.Style("cyan", "italic", templatePath))
-		fmt.Println(styling.Style("cyan", "", "\"\n"))
+		fmt.Printf(styling.Style("cyan", "", "\"\n"))
 		var filesCreated int
 		for _, path := range onsongFiles {
 			fileInfo, err := os.Stat(path)
@@ -90,9 +93,9 @@ func main() {
 			}
 
 			if fileInfo.IsDir() {
-				filesCreated += parseFolder(path, templatePath, metadataKeys, recursive, padding, paddingSens)
+				filesCreated += parseFolder(path, templatePath, metadataKeys, recursive, padding, paddingSens, fixUmlauts)
 			} else {
-				if parseOnsongFile(path, templatePath, metadataKeys, padding, paddingSens) {
+				if parseOnsongFile(path, templatePath, metadataKeys, padding, paddingSens, fixUmlauts) {
 					filesCreated++
 				}
 			}
@@ -107,7 +110,7 @@ func main() {
 	}
 }
 
-func parseFolder(path string, templatePath string, metadataKeys []string, recursive bool, padding int, paddingSens int) int {
+func parseFolder(path string, templatePath string, metadataKeys []string, recursive bool, padding int, paddingSens int, fixUmlauts bool) int {
 	files, err := ioutil.ReadDir(path)
 	if err != nil {
 		fileError(err, path)
@@ -130,7 +133,7 @@ func parseFolder(path string, templatePath string, metadataKeys []string, recurs
 
 		if fileInfo.IsDir() {
 			if recursive {
-				parseFolder(filePath, templatePath, metadataKeys, recursive, padding, paddingSens)
+				parseFolder(filePath, templatePath, metadataKeys, recursive, padding, paddingSens, fixUmlauts)
 			} else {
 				fmt.Printf("Skipping directory: \"")
 				fmt.Printf(styling.Style("white", "italic", filePath))
@@ -143,14 +146,14 @@ func parseFolder(path string, templatePath string, metadataKeys []string, recurs
 			continue
 		}
 
-		if parseOnsongFile(filePath, templatePath, metadataKeys, padding, paddingSens) {
+		if parseOnsongFile(filePath, templatePath, metadataKeys, padding, paddingSens, fixUmlauts) {
 			filesCreated++
 		}
 	}
 	return filesCreated
 }
 
-func parseOnsongFile(path string, templatePath string, metadataKeys []string, padding int, paddingSens int) bool {
+func parseOnsongFile(path string, templatePath string, metadataKeys []string, padding int, paddingSens int, fixUmlauts bool) bool {
 	if !strings.HasSuffix(path, ".onsong") {
 		fmt.Printf(styling.Style("yellow", "", "Warning: File \""))
 		fmt.Printf(styling.Style("yellow", "italic", path))
@@ -162,6 +165,9 @@ func parseOnsongFile(path string, templatePath string, metadataKeys []string, pa
 		return false
 	}
 	html := html.CreateHtml(song, templatePath)
+	if fixUmlauts {
+		path = replaceUmlauts(path)
+	}
 	htmlPath := strings.Replace(path, ".onsong", ".html", 1)
 	os.WriteFile(htmlPath, []byte(html), 0666)
 	fmt.Printf("Created File: ")
@@ -169,6 +175,17 @@ func parseOnsongFile(path string, templatePath string, metadataKeys []string, pa
 	fmt.Printf(styling.Style("green", "italic", htmlPath))
 	fmt.Printf(styling.Style("green", "italic", "\"\n"))
 	return true
+}
+
+//replaces the umlauts from OnSongs (imo broken) filenames
+//can be diabled with "--dont-fix-umlauts"
+//(and yes "umlauts" is the correct english plural, check if you don't trust me)
+func replaceUmlauts(s string) string {
+	s = strings.Replace(s, "u"+string([]byte{226, 149, 160, 208, 152}), "ü", -1)
+	s = strings.Replace(s, "o"+string([]byte{226, 149, 160, 208, 152}), "ö", -1)
+	s = strings.Replace(s, "a"+string([]byte{226, 149, 160, 208, 152}), "ä", -1)
+	s = strings.Replace(s, string([]byte{226, 148, 156, 208, 175}), "ß", -1)
+	return s
 }
 
 func fileError(err error, path string) {
@@ -187,6 +204,7 @@ func printHelp() {
 	fmt.Println("\nUsage: Onsong-Parser-go [OPTION]... [FILE/FOLDER]... ")
 	fmt.Println("Parses *.onsong files to *.html files\n")
 	fmt.Println("Options:")
+	fmt.Println("    --dont-fix-umlauts    don't fix the broken OnSong filenames")
 	fmt.Println("-h, --help                show this info")
 	fmt.Println("-m, --metadata-tags       which metadata tags should be shown ")
 	fmt.Println("                          (e.g.: \"Key Duration Keywords\")")

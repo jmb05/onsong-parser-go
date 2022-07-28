@@ -1,4 +1,4 @@
-module github.com/jmb05/Onsong-Parser-go
+module github.com/jmb05/onsong-parser-go
 
 go 1.18
 

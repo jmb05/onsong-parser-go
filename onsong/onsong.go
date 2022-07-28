@@ -37,10 +37,18 @@ func Parse(content string, metadataKeys []string, defaultPadding int, paddingSen
 		return Song{}, false
 	}
 	paragraphs := SplitParagraphs(content)
+	title := "No Title"
+	artist := "Unknown Artist"
+	if len(paragraphs[0]) > 0 {
+		title = paragraphs[0][0]
+	}
+	if len(paragraphs[0]) > 1 {
+		artist = paragraphs[0][1]
+	}
 	metadata, copyright := ParseMetadata(paragraphs[0], metadataKeys)
 	song := Song{
-		Title:     paragraphs[0][0],
-		Artist:    paragraphs[0][1],
+		Title:     title,
+		Artist:    artist,
 		Meta:      metadata,
 		Sections:  ParseSections(paragraphs, defaultPadding, paddingSensitivity),
 		Copyright: copyright,
@@ -67,11 +75,13 @@ func SplitParagraphs(content string) [][]string {
 func ParseMetadata(paragraph []string, includedKeys []string) ([]string, string) {
 	metadata := []string{}
 	var copyright string
-	for _, line := range paragraph[2:] {
-		if strings.HasPrefix(line, "Copyright") {
-			copyright = strings.TrimSpace(strings.Split(line, ":")[1])
-		} else if doesKeyExist(includedKeys, strings.Split(line, ":")[0]) {
-			metadata = append(metadata, line)
+	if len(paragraph) > 2 {
+		for _, line := range paragraph[2:] {
+			if strings.HasPrefix(line, "Copyright") {
+				copyright = strings.TrimSpace(strings.Split(line, ":")[1])
+			} else if doesKeyExist(includedKeys, strings.Split(line, ":")[0]) {
+				metadata = append(metadata, line)
+			}
 		}
 	}
 	return metadata, copyright
