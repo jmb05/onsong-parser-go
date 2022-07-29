@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"text/template"
 
-	"github.com/jmb05/Onsong-Parser-go/onsong"
+	"github.com/jmb05/onsong-parser-go/onsong"
 	"github.com/jmb05/styling"
 )
 
@@ -25,6 +25,6 @@ func CreateHtml(song onsong.Song, templatePath string) string {
 }
 
 func parseError(err error) {
-	fmt.Println(styling.Color("red", "Error applying template"))
+	fmt.Println(styling.Style("red", "regular", "Error applying template"))
 	fmt.Println(err)
 }

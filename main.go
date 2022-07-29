@@ -9,12 +9,13 @@ import (
 	"strings"
 
 	"github.com/TomOnTime/utfutil"
-	"github.com/jmb05/Onsong-Parser-go/html"
-	"github.com/jmb05/Onsong-Parser-go/onsong"
+	"github.com/jmb05/onsong-parser-go/html"
+	"github.com/jmb05/onsong-parser-go/onsong"
 	"github.com/jmb05/styling"
 )
 
-const defaultTemplatePath = "html/template.gohtml"
+const DEFAULT_TEMPLATE_PATH = "html/template.gohtml"
+const DEFAULT_PADDING = 15
 
 func readFile(path string) string {
 	content, err := utfutil.ReadFile(path, utfutil.UTF8)
@@ -26,32 +27,63 @@ func readFile(path string) string {
 }
 
 func main() {
-	fmt.Println(styling.ColorBold("white", "Onsong to HTML Parser"))
-	fmt.Println("Copyright (C) 2022, Bennett")
+	metadataKeys := []string{"Key", "Time", "Tempo"}
+	fmt.Println(styling.Style("white", "bold", "Onsong to HTML Parser"))
+	fmt.Println("Copyright (C) 2022, Josiah Bennett, Jared M. Bennett")
 	var skip int
-	templatePath := defaultTemplatePath
+	templatePath := DEFAULT_TEMPLATE_PATH
 	onsongFiles := []string{}
 	recursive := false
+	padding := DEFAULT_PADDING
+	paddingSens := 0
+	fixUmlauts := true
 	for i, arg := range os.Args[1:] {
 		if skip > 0 {
 			skip--
 			continue
 		}
-		if arg == "-t" {
+		switch arg {
+		case "--dont-fix-umlauts":
+			fixUmlauts = false
+		case "-t", "--template":
 			templatePath = os.Args[i+2]
 			skip = 1
 			if !exists(templatePath) {
-				fmt.Println(styling.Color("yellow", "Warning: Template \"") + styling.ColorItalic("yellow", templatePath) + styling.Color("yellow", "\" does not exist! Using default..."))
-				templatePath = defaultTemplatePath
+				fmt.Printf(styling.Style("yellow", "", "Warning: Template \""))
+				fmt.Printf(styling.Style("yellow", "italic", templatePath))
+				fmt.Printf(styling.Style("yellow", "", "\" does not exist! Using default...\n"))
+				templatePath = DEFAULT_TEMPLATE_PATH
 			}
-		} else if arg == "-r" {
+		case "-r", "--recursive":
 			recursive = true
-		} else {
+		case "-m", "--metadata-tags":
+			metadataKeys = strings.Split(os.Args[i+2], " ")
+			skip = 1
+		case "-p", "--padding-size":
+			paddingCp, err := strconv.Atoi(os.Args[i+2])
+			padding = paddingCp
+			if err != nil {
+				panic(err)
+			}
+			skip = 1
+		case "--padding-sensitivity":
+			paddingSensCp, err := strconv.Atoi(os.Args[i+2])
+			paddingSens = paddingSensCp
+			if err != nil {
+				panic(err)
+			}
+			skip = 1
+		case "-h", "--help":
+			printHelp()
+			os.Exit(0)
+		default:
 			onsongFiles = append(onsongFiles, arg)
 		}
 	}
 	if len(onsongFiles) > 0 {
-		fmt.Println("Using Template: " + styling.Color("cyan", "\"") + styling.ColorItalic("cyan", templatePath) + styling.Color("cyan", "\""))
+		fmt.Printf("Using Template: " + styling.Style("cyan", "", "\""))
+		fmt.Printf(styling.Style("cyan", "italic", templatePath))
+		fmt.Printf(styling.Style("cyan", "", "\"\n"))
 		var filesCreated int
 		for _, path := range onsongFiles {
 			fileInfo, err := os.Stat(path)
@@ -61,24 +93,24 @@ func main() {
 			}
 
 			if fileInfo.IsDir() {
-				filesCreated += parseFolder(path, templatePath, recursive)
+				filesCreated += parseFolder(path, templatePath, metadataKeys, recursive, padding, paddingSens, fixUmlauts)
 			} else {
-				if parseOnsongFile(path, templatePath) {
+				if parseOnsongFile(path, templatePath, metadataKeys, padding, paddingSens, fixUmlauts) {
 					filesCreated++
 				}
 			}
 		}
-		if filesCreated > 1 {
-			fmt.Println(styling.ColorBold("green", "Created "+strconv.Itoa(filesCreated)+" Files"))
+		if filesCreated == 1 {
+			fmt.Println(styling.Style("green", "bold", "Created "+strconv.Itoa(filesCreated)+" File"))
 		} else {
-			fmt.Println(styling.ColorBold("green", "Created "+strconv.Itoa(filesCreated)+" File"))
+			fmt.Println(styling.Style("green", "bold", "Created "+strconv.Itoa(filesCreated)+" Files"))
 		}
 	} else {
-		fmt.Println(styling.ColorBold("red", "No Files selected"))
+		fmt.Println(styling.Style("red", "bold", "No Files selected"))
 	}
 }
 
-func parseFolder(path string, templatePath string, recursive bool) int {
+func parseFolder(path string, templatePath string, metadataKeys []string, recursive bool, padding int, paddingSens int, fixUmlauts bool) int {
 	files, err := ioutil.ReadDir(path)
 	if err != nil {
 		fileError(err, path)
@@ -101,9 +133,11 @@ func parseFolder(path string, templatePath string, recursive bool) int {
 
 		if fileInfo.IsDir() {
 			if recursive {
-				parseFolder(filePath, templatePath, recursive)
+				parseFolder(filePath, templatePath, metadataKeys, recursive, padding, paddingSens, fixUmlauts)
 			} else {
-				fmt.Println("Skipping directory: \"" + styling.ColorItalic("white", filePath) + "\" Add parameter \"-r\" to parse recursively")
+				fmt.Printf("Skipping directory: \"")
+				fmt.Printf(styling.Style("white", "italic", filePath))
+				fmt.Printf("\" Add parameter \"-r\" to parse recursively\n")
 				continue
 			}
 		}
@@ -112,35 +146,70 @@ func parseFolder(path string, templatePath string, recursive bool) int {
 			continue
 		}
 
-		if parseOnsongFile(filePath, templatePath) {
+		if parseOnsongFile(filePath, templatePath, metadataKeys, padding, paddingSens, fixUmlauts) {
 			filesCreated++
 		}
 	}
 	return filesCreated
 }
 
-func parseOnsongFile(path string, templatePath string) bool {
+func parseOnsongFile(path string, templatePath string, metadataKeys []string, padding int, paddingSens int, fixUmlauts bool) bool {
 	if !strings.HasSuffix(path, ".onsong") {
-		fmt.Println(styling.Color("yellow", "Warning: File \"") + styling.ColorItalic("yellow", path) + styling.Color("yellow", "\" doesn't have \".onsong\" ending"))
+		fmt.Printf(styling.Style("yellow", "", "Warning: File \""))
+		fmt.Printf(styling.Style("yellow", "italic", path))
+		fmt.Printf(styling.Style("yellow", "", "\" doesn't have \".onsong\" ending!\n"))
 	}
-	song, success := onsong.Parse(readFile(path))
+	song, success := onsong.Parse(readFile(path), metadataKeys, padding, paddingSens)
 	if !success {
-		fmt.Println(styling.Color("yellow", "Skipping..."))
+		fmt.Println(styling.Style("yellow", "", "Skipping..."))
 		return false
 	}
 	html := html.CreateHtml(song, templatePath)
+	if fixUmlauts {
+		path = replaceUmlauts(path)
+	}
 	htmlPath := strings.Replace(path, ".onsong", ".html", 1)
 	os.WriteFile(htmlPath, []byte(html), 0666)
-	fmt.Println("Created File: " + styling.Color("green", "\"") + styling.ColorItalic("green", htmlPath) + styling.Color("green", "\""))
+	fmt.Printf("Created File: ")
+	fmt.Printf(styling.Style("green", "", "\""))
+	fmt.Printf(styling.Style("green", "italic", htmlPath))
+	fmt.Printf(styling.Style("green", "italic", "\"\n"))
 	return true
 }
 
+//replaces the umlauts from OnSongs (imo broken) filenames
+//can be diabled with "--dont-fix-umlauts"
+//(and yes "umlauts" is the correct english plural, check if you don't trust me)
+func replaceUmlauts(s string) string {
+	s = strings.Replace(s, "u"+string([]byte{226, 149, 160, 208, 152}), "ü", -1)
+	s = strings.Replace(s, "o"+string([]byte{226, 149, 160, 208, 152}), "ö", -1)
+	s = strings.Replace(s, "a"+string([]byte{226, 149, 160, 208, 152}), "ä", -1)
+	s = strings.Replace(s, string([]byte{226, 148, 156, 208, 175}), "ß", -1)
+	return s
+}
+
 func fileError(err error, path string) {
-	fmt.Println(styling.Color("red", "Error reading file: \"") + styling.ColorItalic("red", path) + styling.Color("red", "\""))
+	fmt.Printf(styling.Style("red", "", "Error reading file: \""))
+	fmt.Printf(styling.Style("red", "italic", path))
+	fmt.Printf(styling.Style("red", "", "\"\n"))
 	log.Println(err)
 }
 
 func exists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
+}
+
+func printHelp() {
+	fmt.Println("\nUsage: Onsong-Parser-go [OPTION]... [FILE/FOLDER]... ")
+	fmt.Println("Parses *.onsong files to *.html files\n")
+	fmt.Println("Options:")
+	fmt.Println("    --dont-fix-umlauts    don't fix the broken OnSong filenames")
+	fmt.Println("-h, --help                show this info")
+	fmt.Println("-m, --metadata-tags       which metadata tags should be shown ")
+	fmt.Println("                          (e.g.: \"Key Duration Keywords\")")
+	fmt.Println("-r, --recursive           search recursive (in subfolders)")
+	fmt.Println("-p, --padding-size        size of the padding between chords (per character)")
+	fmt.Println("    --padding-sensitivity change the padding sensitivity")
+	fmt.Println("-t, --template            choose a custom template")
 }

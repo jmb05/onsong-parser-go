@@ -32,17 +32,25 @@ type Chord struct {
 	Padding int
 }
 
-func Parse(content string) (Song, bool) {
-	if strings.TrimSpace(content) == "" {
+func Parse(content string, metadataKeys []string, defaultPadding int, paddingSensitivity int) (Song, bool) {
+	if isBlank(content) {
 		return Song{}, false
 	}
 	paragraphs := SplitParagraphs(content)
-	metadata, copyright := ParseMetadata(paragraphs)
+	title := "No Title"
+	artist := "Unknown Artist"
+	if len(paragraphs[0]) > 0 {
+		title = paragraphs[0][0]
+	}
+	if len(paragraphs[0]) > 1 {
+		artist = paragraphs[0][1]
+	}
+	metadata, copyright := ParseMetadata(paragraphs[0], metadataKeys)
 	song := Song{
-		Title:     ParseTitle(paragraphs),
-		Artist:    ParseArtist(paragraphs),
+		Title:     title,
+		Artist:    artist,
 		Meta:      metadata,
-		Sections:  ParseSections(paragraphs),
+		Sections:  ParseSections(paragraphs, defaultPadding, paddingSensitivity),
 		Copyright: copyright,
 	}
 	return song, true
@@ -64,28 +72,31 @@ func SplitParagraphs(content string) [][]string {
 	return out
 }
 
-func ParseTitle(paragraphs [][]string) string {
-	return strings.Replace(paragraphs[0][0], string([]byte{255, 254}), "", 1)
-}
-
-func ParseArtist(paragraphs [][]string) string {
-	return paragraphs[0][1]
-}
-
-func ParseMetadata(paragraphs [][]string) ([]string, string) {
-	lines := []string{}
+func ParseMetadata(paragraph []string, includedKeys []string) ([]string, string) {
+	metadata := []string{}
 	var copyright string
-	for i := 2; i < len(paragraphs[0]); i++ {
-		if strings.HasPrefix(paragraphs[0][i], "Copyright") {
-			copyright = strings.TrimSpace(strings.Split(paragraphs[0][i], ":")[1])
-		} else if !strings.HasPrefix(paragraphs[0][i], "Keywords") && !strings.HasPrefix(paragraphs[0][i], "CCLI") {
-			lines = append(lines, paragraphs[0][i])
+	if len(paragraph) > 2 {
+		for _, line := range paragraph[2:] {
+			if strings.HasPrefix(line, "Copyright") {
+				copyright = strings.TrimSpace(strings.Split(line, ":")[1])
+			} else if doesKeyExist(includedKeys, strings.Split(line, ":")[0]) {
+				metadata = append(metadata, line)
+			}
 		}
 	}
-	return lines, copyright
+	return metadata, copyright
 }
 
-func ParseSections(paragraphs [][]string) []Section {
+func doesKeyExist(s []string, str string) bool {
+	for _, v := range s {
+		if v == str {
+			return true
+		}
+	}
+	return false
+}
+
+func ParseSections(paragraphs [][]string, defaultPadding int, paddingSensitivity int) []Section {
 	sections := []Section{}
 	if len(paragraphs) > 1 {
 		for i := 1; i < len(paragraphs); i++ {
@@ -94,7 +105,7 @@ func ParseSections(paragraphs [][]string) []Section {
 
 				var title string
 				var startFrom int
-				if isTitle(paragraphs[i][0]) {
+				if isSectionTitle(paragraphs[i][0]) {
 					startFrom = 1
 					title = paragraphs[i][0]
 				} else {
@@ -103,7 +114,7 @@ func ParseSections(paragraphs [][]string) []Section {
 
 				for _, lineStr := range paragraphs[i][startFrom:] {
 					line := Line{
-						Parts: parseLineParts(lineStr),
+						Parts: parseLineParts(lineStr, defaultPadding, paddingSensitivity),
 					}
 					lines = append(lines, line)
 				}
@@ -119,11 +130,11 @@ func ParseSections(paragraphs [][]string) []Section {
 	return sections
 }
 
-func isTitle(line string) bool {
+func isSectionTitle(line string) bool {
 	return !(strings.Contains(line, "[") && strings.Contains(line, "]"))
 }
 
-func parseLineParts(lineStr string) []LinePart {
+func parseLineParts(lineStr string, defaultPadding int, paddingSensitivity int) []LinePart {
 	lineParts := []LinePart{}
 	splitLineU := splitLine(lineStr)
 	splitLine := removeBlankParts(splitLineU)
@@ -133,10 +144,10 @@ func parseLineParts(lineStr string) []LinePart {
 			if i > 0 {
 				partBefore := splitLine[i-1]
 				if isChord(partBefore) {
-					padding = len(strings.TrimSpace(partBefore)) * 15
+					padding = len(strings.TrimSpace(partBefore)) * defaultPadding
 				} else if i > 1 {
 					chordBefore := splitLine[i-2]
-					padding = (len(chordBefore) - len(partBefore) - 1) * 15
+					padding = (len(chordBefore) - len(partBefore) + (paddingSensitivity - 1)) * defaultPadding
 					if padding < 0 {
 						padding = 0
 					}
