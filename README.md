@@ -126,6 +126,8 @@ Then either:
 <!-- ROADMAP -->
 ## Roadmap
 
+Add OnSong formatting
+
 See the [open issues](https://github.com/jmb05/Onsong-Parser-go/issues) for a full list of proposed features (and known issues).
 
 <p align="right">(<a href="#top">back to top</a>)</p>
