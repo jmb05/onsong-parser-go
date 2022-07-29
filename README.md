@@ -99,11 +99,14 @@ songs with others in a gathering using a wireless network.
 
 ### Prerequisites
 
-Go [Installation](https://github.com/josiah-bennett/Onsong-SSG)
+Go [Installation](https://go.dev/doc/install)
 
 ### Installation
 
-_Instructions coming Soon™_
+Clone the repo: `git clone https://github.com/jmb05/onsong-parser-go/`
+Then either:
+* To build the project and create an executable in the project directory, run `go build`
+* To build the project and create an executable in `$GOPATH/bin/`, run `go install`
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
@@ -112,7 +115,9 @@ _Instructions coming Soon™_
 <!-- USAGE EXAMPLES -->
 ## Usage
 
-_Instructions coming Soon™_
+* To convert files use `onsong-parser-go "/path/to/file1.onsong" "/path/to/file2.onsong"` 
+* To convert all onsong files inside a directory use `onsong-parser-go "/path/to/directory"`
+  To include all subdirectories add the `-r` option
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
