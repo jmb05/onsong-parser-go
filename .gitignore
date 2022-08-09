@@ -18,3 +18,7 @@
 *.html
 songs/
 onsong-parser-go
+transpose.js
+html/song-template-test.gohtml
+html/song-template-no-monospace.gohtml
+html/index-template-test.gohtml

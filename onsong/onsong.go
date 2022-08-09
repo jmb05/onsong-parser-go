@@ -173,7 +173,7 @@ func isChord(part string) bool {
 func removeBlankParts(partsIn []string) []string {
 	outParts := []string{}
 	for _, part := range partsIn {
-		if len(part) != 0 {
+		if strings.TrimSpace(part) != "" {
 			outParts = append(outParts, part)
 		}
 	}
