@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+   <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width initial-scale=1">
+      <link rel="stylesheet" href="./css/index.css">
+      <title>{{ .Title }}</title>
+      <meta name="description" content="A HTML Song Library created with the onsong-parser-go (https://github.com/jmb05/onsong-parser-go)">
+   </head>
+   <body>
+      <h1>{{ .Title }}</h1>
+      <hr>
+      <div id="songs">
+         <input id="searchbar" onkeyup="search_song()" type="text" name="search" placeholder="Search Songs...">
+         <ul>
+            {{ range .Songs }}<li class="songs-entry"><a href="{{ .Location }}">{{ .Name }}</a></li>{{ end }}
+         </ul>
+      </div>
+      <script>
+         function search_song() {
+            let input = document.getElementById("searchbar").value;
+            input=input.toLowerCase();
+            let x = document.getElementsByClassName("songs-entry");
+            for (i=0;i<x.length;i++) {
+               if (!x[i].innerHTML.toLowerCase().includes(input)) {
+                  x[i].style.display="none";
+               } else {
+                  x[i].style.display="list-item"
+               }
+            }
+         }
+      </script>
+   </body>
+</html>

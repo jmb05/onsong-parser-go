@@ -14,8 +14,22 @@ import (
 	"github.com/jmb05/styling"
 )
 
-const DEFAULT_TEMPLATE_PATH = "html/template.gohtml"
+const DEFAULT_TEMPLATE_PATH = "html/song-template.gohtml"
 const DEFAULT_PADDING = 15
+
+type Settings struct {
+	songLibrary  *html.SongLibrary
+	templatePath string
+	metadataKeys []string
+	padding      int
+	paddingSens  int
+	fixUmlauts   bool
+}
+
+type ParseData struct {
+	inputPath  string
+	outputPath string
+}
 
 func readFile(path string) string {
 	content, err := utfutil.ReadFile(path, utfutil.UTF8)
@@ -37,6 +51,7 @@ func main() {
 	padding := DEFAULT_PADDING
 	paddingSens := 0
 	fixUmlauts := true
+	listName := ""
 	var output string
 	for i, arg := range os.Args[1:] {
 		if skip > 0 {
@@ -80,6 +95,9 @@ func main() {
 		case "-h", "--help":
 			printHelp()
 			os.Exit(0)
+		case "-l", "--create-list":
+			listName = os.Args[i+2]
+			skip = 1
 		default:
 			onsongFiles = append(onsongFiles, arg)
 		}
@@ -88,58 +106,39 @@ func main() {
 		fmt.Printf("Using Template: " + styling.Style("cyan", "", "\""))
 		fmt.Printf(styling.Style("cyan", "italic", templatePath))
 		fmt.Printf(styling.Style("cyan", "", "\"\n"))
+
+		var songLibrary html.SongLibrary
+		if listName != "" {
+			songLibrary = html.SongLibrary{
+				Title: listName,
+				Songs: []html.SongEntry{},
+			}
+		}
+
 		var filesCreated int
-		for _, path := range onsongFiles {
-			fileInfo, err := os.Stat(path)
-			if err != nil {
-				fileError(err, path)
-				continue
-			}
-
-			outputExists := true
-			var outputIsDirectory bool
-
-			outputInfo, err := os.Stat(output)
-			if err != nil {
-				outputExists = false
-				outputIsDirectory = !exists(getParent(output))
-			} else {
-				outputIsDirectory = outputInfo.IsDir()
-			}
-
-			if fileInfo.IsDir() {
-				if outputExists {
-					if outputIsDirectory {
-						filesCreated += parseFolder(path, output, templatePath, metadataKeys, recursive, padding, paddingSens, fixUmlauts)
-					} else {
-						fmt.Println(styling.Style("red", "", "Output has to be a directory (when using a directory as input)"))
-					}
-				} else {
-					fmt.Printf(styling.Style("red", "", "Specified output directory \""))
-					fmt.Printf(styling.Style("red", "italic", output))
-					fmt.Printf(styling.Style("red", "", "\" does not exist!\n"))
-					break
+		outputInfo, err := os.Stat(output)
+		if err != nil {
+			fmt.Println(styling.Style("red", "", "Output doens't exist"))
+		} else if !outputInfo.IsDir() {
+			fmt.Println(styling.Style("red", "", "Output has to be a directory"))
+		} else {
+			for _, path := range onsongFiles {
+				fileInfo, err := os.Stat(path)
+				if err != nil {
+					fileError(err, path)
+					continue
 				}
-			} else {
-				if !outputExists {
-					if parseOnsongFile(path, output, templatePath, metadataKeys, padding, paddingSens, fixUmlauts) {
-						filesCreated++
-					}
-				} else if outputIsDirectory {
-					appendedOutPath := appendFilePaths(output, strings.Replace(getFileName(path), ".onsong", ".html", -1))
-					if parseOnsongFile(path, appendedOutPath, templatePath, metadataKeys, padding, paddingSens, fixUmlauts) {
-						filesCreated++
-					}
+				if fileInfo.IsDir() {
+					appendedOutPath := appendFilePaths(output, "songs/")
+					createFolder(appendedOutPath)
+					filesCreated += parseFolder(path, appendedOutPath, templatePath, metadataKeys, recursive, padding, paddingSens, fixUmlauts, &songLibrary)
 				} else {
-					fmt.Printf(styling.Style("yellow", "", "Specified output file \""))
-					fmt.Printf(styling.Style("yellow", "italic", output))
-					fmt.Printf(styling.Style("yellow", "", "\" already exists!\n"))
-					fmt.Printf(styling.Style("yellow", "", "Do you want to override? "))
-					if readYesNo(false) {
-						if parseOnsongFile(path, output, templatePath, metadataKeys, padding, paddingSens, fixUmlauts) {
-							filesCreated++
-						}
-					}
+					fmt.Println(styling.Style("red", "", "Input has to be a directory containing the OnSong files"))
+					/*appendedOutPath := appendFilePaths(output, "songs/")
+					appendedOutPath = appendFilePaths(appendedOutPath, strings.Replace(getFileName(path), ".onsong", ".html", -1))
+					if parseOnsongFile(path, appendedOutPath, templatePath, metadataKeys, padding, paddingSens, fixUmlauts, &songLibrary) {
+						filesCreated++
+					}*/
 				}
 			}
 		}
@@ -148,19 +147,20 @@ func main() {
 		} else {
 			fmt.Println(styling.Style("green", "bold", "Created "+strconv.Itoa(filesCreated)+" Files"))
 		}
+		if &songLibrary != nil && filesCreated > 0 {
+			html := html.CreateListHtml(songLibrary, "html/index-template.gohtml")
+			os.WriteFile(output+"/index.html", []byte(html), os.ModePerm)
+		}
 	} else {
 		fmt.Println(styling.Style("red", "bold", "No Files selected"))
 	}
 }
 
-func parseFolder(path string, outputPath string, templatePath string, metadataKeys []string, recursive bool, padding int, paddingSens int, fixUmlauts bool) int {
+func parseFolder(path string, outputPath string, templatePath string, metadataKeys []string, recursive bool, padding int, paddingSens int, fixUmlauts bool, songLibrary *html.SongLibrary) int {
 	files, err := ioutil.ReadDir(path)
 	if err != nil {
 		fileError(err, path)
 		return 0
-	}
-	if !exists(outputPath) {
-		outputPath = path
 	}
 	var filesCreated int
 	for _, file := range files {
@@ -174,17 +174,10 @@ func parseFolder(path string, outputPath string, templatePath string, metadataKe
 		if fileInfo.IsDir() {
 			if recursive {
 				appendedOutPath := appendFilePaths(outputPath, fileInfo.Name())
-				if !exists(appendedOutPath) {
-					os.Mkdir(appendedOutPath, 0666)
-					fmt.Printf("Created missing subdirectory \"")
-					fmt.Printf(styling.Style("", "italic", appendedOutPath))
-					fmt.Printf("\"\n")
-				}
-				parseFolder(filePath, appendedOutPath, templatePath, metadataKeys, recursive, padding, paddingSens, fixUmlauts)
+				createFolder(appendedOutPath)
+				parseFolder(filePath, appendedOutPath, templatePath, metadataKeys, recursive, padding, paddingSens, fixUmlauts, songLibrary)
 			} else {
-				fmt.Printf("Skipping directory: \"")
-				fmt.Printf(styling.Style("white", "italic", filePath))
-				fmt.Printf("\" Add parameter \"-r\" to parse recursively\n")
+				printSkipSubdirectory(filePath)
 				continue
 			}
 		}
@@ -194,34 +187,46 @@ func parseFolder(path string, outputPath string, templatePath string, metadataKe
 		}
 
 		appendedOutPath := appendFilePaths(outputPath, strings.Replace(fileInfo.Name(), ".onsong", ".html", -1))
-		if parseOnsongFile(filePath, appendedOutPath, templatePath, metadataKeys, padding, paddingSens, fixUmlauts) {
+		if parseOnsongFile(filePath, appendedOutPath, templatePath, metadataKeys, padding, paddingSens, fixUmlauts, songLibrary) {
 			filesCreated++
 		}
 	}
 	return filesCreated
 }
 
-func parseOnsongFile(path string, outputPath string, templatePath string, metadataKeys []string, padding int, paddingSens int, fixUmlauts bool) bool {
-	if !strings.HasSuffix(path, ".onsong") {
-		fmt.Printf(styling.Style("yellow", "", "Warning: File \""))
-		fmt.Printf(styling.Style("yellow", "italic", path))
-		fmt.Printf(styling.Style("yellow", "", "\" doesn't have \".onsong\" ending!\n"))
-	}
+func parseOnsongFile(path string, outputPath string, templatePath string, metadataKeys []string, padding int, paddingSens int, fixUmlauts bool, songLibrary *html.SongLibrary) bool {
 	song, success := onsong.Parse(readFile(path), metadataKeys, padding, paddingSens)
 	if !success {
 		fmt.Println(styling.Style("yellow", "", "Skipping..."))
 		return false
 	}
-	html := html.CreateHtml(song, templatePath)
 	if fixUmlauts {
-		path = replaceUmlauts(path)
+		outputPath = replaceUmlauts(outputPath)
 	}
-	os.WriteFile(outputPath, []byte(html), 0666)
+	if songLibrary != nil {
+		fileName := getFileName(outputPath)
+		parent := getParent(outputPath)
+		parent = getFileName(parent[0 : len(parent)-1])
+		songEntry := html.SongEntry{song.Title, appendFilePaths(parent, fileName)}
+		songLibrary.Songs = append(songLibrary.Songs, songEntry)
+	}
+	html := html.CreateSongHtml(song, templatePath)
+	err := os.WriteFile(outputPath, []byte(html), os.ModePerm)
+	if err != nil {
+		fileError(err, outputPath)
+		return false
+	}
 	fmt.Printf("Created File: ")
 	fmt.Printf(styling.Style("green", "", "\""))
 	fmt.Printf(styling.Style("green", "italic", outputPath))
 	fmt.Printf(styling.Style("green", "italic", "\"\n"))
 	return true
+}
+
+func printSkipSubdirectory(path string) {
+	fmt.Printf("Skipping directory: \"")
+	fmt.Printf(styling.Style("white", "italic", path))
+	fmt.Printf("\" Add parameter \"-r\" to parse recursively\n")
 }
 
 func appendFilePaths(p1 string, p2 string) string {
@@ -269,6 +274,15 @@ func getFileName(path string) string {
 	return parts[len(parts)-1]
 }
 
+func createFolder(path string) {
+	if !exists(path) {
+		os.Mkdir(path, os.ModePerm)
+		fmt.Printf("Created missing directory \"")
+		fmt.Printf(styling.Style("", "italic", path))
+		fmt.Printf("\"\n")
+	}
+}
+
 func readYesNo(defaultYes bool) bool {
 	var buf string
 	if defaultYes {
@@ -293,6 +307,8 @@ func printHelp() {
 	fmt.Println("Options:")
 	fmt.Println("    --dont-fix-umlauts    don't fix the broken OnSong filenames")
 	fmt.Println("-h, --help                show this info")
+	fmt.Println("-l, --create-list         create an html file with links to all the songs")
+	fmt.Println("                          Requires a Title")
 	fmt.Println("-m, --metadata-tags       which metadata tags should be shown ")
 	fmt.Println("                          (e.g.: \"Key Duration Keywords\")")
 	fmt.Println("-o, --output              specify output file/directory")

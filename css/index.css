@@ -1,0 +1,58 @@
+body {
+    font-family: "Helvetica";
+    background: #ccc5c4;
+    color: #070707;
+}
+
+h1 {
+    font-size: 3em;
+    font-variant: small-caps;
+    text-align: center;
+}
+
+#songs {
+    position: relative;
+    font-size: 1em;
+}
+
+#songs h3 {
+    padding-left: 0.5em;
+}
+
+#searchbar {
+   margin-left: 5%;
+   padding:5px;
+   border-radius: 2px;
+}
+
+input[type=text] {
+   width: 50%;
+   -webkit-transition: width 0.15s ease-in-out;
+   transition: width 0.15s ease-in-out;
+}
+
+.songs-entry {
+   display: list-item;
+}
+
+#songs a {
+    line-height: 140%;
+    font-size: 1.5em;
+    color: #440044;
+}
+
+#songs a:visited {
+    color: #e05a1c;
+}
+
+@media (min-width: 0em) {
+    #songs { width: 100%; }
+}
+
+@media (min-width: 55em) {
+    #songs { width: 85%; left: 15%; }
+}
+
+@media (min-width: 100em) {
+    #songs { width: 75%; left: 25%; }
+}

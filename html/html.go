@@ -9,7 +9,7 @@ import (
 	"github.com/jmb05/styling"
 )
 
-func CreateHtml(song onsong.Song, templatePath string) string {
+func CreateSongHtml(song onsong.Song, templatePath string) string {
 	tmpl, err := template.ParseFiles(templatePath)
 	if err != nil {
 		parseError(err)
@@ -17,6 +17,31 @@ func CreateHtml(song onsong.Song, templatePath string) string {
 	}
 	var buffer bytes.Buffer
 	err = tmpl.Execute(&buffer, &song)
+	if err != nil {
+		parseError(err)
+		return ""
+	}
+	return buffer.String()
+}
+
+type SongLibrary struct {
+	Title string
+	Songs []SongEntry
+}
+
+type SongEntry struct {
+	Name     string
+	Location string
+}
+
+func CreateListHtml(songLibrary SongLibrary, templatePath string) string {
+	tmpl, err := template.ParseFiles(templatePath)
+	if err != nil {
+		parseError(err)
+		return ""
+	}
+	var buffer bytes.Buffer
+	err = tmpl.Execute(&buffer, &songLibrary)
 	if err != nil {
 		parseError(err)
 		return ""
