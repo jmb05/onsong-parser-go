@@ -43,7 +43,7 @@ func readFile(path string) string {
 func main() {
 	metadataKeys := []string{"Key", "Time", "Tempo"}
 	fmt.Println(styling.Style("white", "bold", "Onsong to HTML Parser"))
-	fmt.Println("Copyright (C) 2022, Josiah Bennett, Jared M. Bennett")
+	fmt.Println("Copyright (C) 2022-2024, Josiah Bennett, Jared M. Bennett")
 	var skip int
 	templatePath := DEFAULT_TEMPLATE_PATH
 	onsongFiles := []string{}
