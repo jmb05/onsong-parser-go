@@ -51,5 +51,5 @@ func CreateListHtml(songLibrary SongLibrary, templatePath string) string {
 
 func parseError(err error) {
 	fmt.Println(styling.Style("red", "regular", "Error applying template"))
-	fmt.Println(err)
+	fmt.Println(styling.Style("red", "regular", err.Error()))
 }

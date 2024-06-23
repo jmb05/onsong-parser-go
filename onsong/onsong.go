@@ -8,6 +8,7 @@ type Song struct {
 	Title     string
 	Artist    string
 	Meta      []string
+    LanguageLinks []LanguageLink
 	Sections  []Section
 	Copyright string
 }
@@ -32,6 +33,11 @@ type Chord struct {
 	Padding int
 }
 
+type LanguageLink struct {
+    LanguageName string
+    SongName string
+}
+
 func Parse(content string, metadataKeys []string, defaultPadding int, paddingSensitivity int) (Song, bool) {
 	if isBlank(content) {
 		return Song{}, false
@@ -45,12 +51,13 @@ func Parse(content string, metadataKeys []string, defaultPadding int, paddingSen
 	if len(paragraphs[0]) > 1 {
 		artist = paragraphs[0][1]
 	}
-	metadata, copyright := ParseMetadata(paragraphs[0], metadataKeys)
+	metadata, copyright, langLinks := ParseMetadata(paragraphs[0], metadataKeys)
 	song := Song{
 		Title:     title,
 		Artist:    artist,
 		Meta:      metadata,
 		Sections:  ParseSections(paragraphs, defaultPadding, paddingSensitivity),
+        LanguageLinks: langLinks,
 		Copyright: copyright,
 	}
 	return song, true
@@ -72,19 +79,28 @@ func SplitParagraphs(content string) [][]string {
 	return out
 }
 
-func ParseMetadata(paragraph []string, includedKeys []string) ([]string, string) {
+func ParseMetadata(paragraph []string, includedKeys []string) ([]string, string, []LanguageLink) {
 	metadata := []string{}
 	var copyright string
+    languageLinks := []LanguageLink{}
 	if len(paragraph) > 2 {
 		for _, line := range paragraph[2:] {
 			if strings.HasPrefix(line, "Copyright") {
 				copyright = strings.TrimSpace(strings.Split(line, ":")[1])
-			} else if doesKeyExist(includedKeys, strings.Split(line, ":")[0]) {
+            } else if strings.HasPrefix(line, "#Lang") {
+                langParts := strings.Split(line, ":")
+                langName := strings.TrimSpace(langParts[1])
+                songName := strings.TrimSpace(langParts[2])
+                languageLinks = append(languageLinks, LanguageLink{
+                    LanguageName: langName,
+                    SongName: songName,
+                })
+            }else if doesKeyExist(includedKeys, strings.Split(line, ":")[0]) {
 				metadata = append(metadata, line)
 			}
 		}
 	}
-	return metadata, copyright
+	return metadata, copyright, languageLinks
 }
 
 func doesKeyExist(s []string, str string) bool {

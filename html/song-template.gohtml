@@ -11,9 +11,15 @@
 		<main>
 			<h1>{{ .Title }}</h1>
 			<h2>{{ .Artist }}</h2>
-			<ul id="metadata">
-				{{ range .Meta }}<li>{{.}}</li>{{ end }}
-			</ul>
+            <div class="song-container">
+            <div class="meta-container">
+                <div class="meta-item">
+                    <ul id="metadata">
+			            {{ range .Meta }}<li>{{.}}</li>{{ end }}
+                        {{ range .LanguageLinks }}<li><a href="{{ .SongName }}.html">{{ .LanguageName }}</a></li>{{ end }}
+                    </ul>
+                </div>
+            </div>
 			<div id="song" class="show-chords">
 				{{ range .Sections }}
 				<h3>{{ .Title }}</h3>
@@ -24,6 +30,7 @@
 				</p>
 				{{ end }}
 			</div>
+            </div>
 		</main>
 		<i id="copyright">{{ .Copyright }}</i>
 		<footer>
