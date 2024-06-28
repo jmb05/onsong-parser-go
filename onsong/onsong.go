@@ -2,6 +2,7 @@ package onsong
 
 import (
 	"strings"
+    "net/url"
 )
 
 type Song struct {
@@ -90,7 +91,7 @@ func ParseMetadata(paragraph []string, includedKeys []string) ([]string, string,
             } else if strings.HasPrefix(line, "#Lang") {
                 langParts := strings.Split(line, ":")
                 langName := strings.TrimSpace(langParts[1])
-                songName := strings.TrimSpace(langParts[2])
+                songName := url.PathEscape(strings.TrimSpace(langParts[2]))
                 languageLinks = append(languageLinks, LanguageLink{
                     LanguageName: langName,
                     SongName: songName,
