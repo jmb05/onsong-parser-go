@@ -78,8 +78,8 @@
 ## About The Project
 A parser for .onsong files to create .html files, made with go.
 Inspired by [Onsong-Parser (in Haskell)](https://github.com/jmb05/Onsong-Parser) 
-and written for its static site generator ([Onsong-SSG](https://github.com/josiah-bennett/Onsong-SSG))
-to create an inteface for a large onsong-library hosted on a raspberry pi. To share
+and its static site generator ([Onsong-SSG](https://github.com/josiah-bennett/Onsong-SSG)).
+The parser creates an inteface for a large onsong-library hosted on a raspberry pi. To share
 songs with others in a gathering using a wireless network.
 
 <p align="right">(<a href="#top">back to top</a>)</p>
